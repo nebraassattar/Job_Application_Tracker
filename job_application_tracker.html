@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A private, local job application tracker with search, filters, statistics, and backups.">
+  <title>Job Application Tracker</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23131b2b'/%3E%3Cpath d='M19 25h26v22H19z' fill='%2359d9b1'/%3E%3Cpath d='M26 25v-5h12v5M19 33h26' fill='none' stroke='%23f6f7fb' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b101a;
+      --panel: #131b2b;
+      --panel-2: #182235;
+      --line: #2a3850;
+      --text: #f6f7fb;
+      --muted: #9aa9bf;
+      --accent: #59d9b1;
+      --accent-2: #8be8ca;
+      --danger: #ff7a8a;
+      --warning: #f2c66d;
+      --blue: #7caeff;
+      --purple: #b49aff;
+      --shadow: 0 24px 70px rgba(0,0,0,.26);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: radial-gradient(circle at 85% -15%, #203c4e 0, transparent 34rem), var(--bg); color: var(--text); }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid rgba(89,217,177,.42); outline-offset: 2px; }
+    .shell { max-width: 1440px; margin: 0 auto; padding: 28px clamp(16px, 3vw, 44px) 60px; }
+    header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; margin-bottom: 26px; }
+    .eyebrow { color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; margin: 0 0 6px; }
+    h1 { font-size: clamp(2rem, 4vw, 3.65rem); line-height: .98; letter-spacing: -.055em; margin: 0; max-width: 700px; }
+    .privacy { margin: 12px 0 0; color: var(--muted); font-size: .92rem; display: flex; gap: 8px; align-items: center; }
+    .privacy svg { width: 16px; height: 16px; color: var(--accent); }
+    .primary, .secondary, .icon-btn, .text-btn { border: 0; border-radius: 12px; min-height: 44px; transition: .18s ease; }
+    .primary { color: #07130f; background: var(--accent); font-weight: 800; padding: 0 18px; box-shadow: 0 8px 28px rgba(89,217,177,.18); }
+    .primary:hover { background: var(--accent-2); transform: translateY(-1px); }
+    .secondary { color: var(--text); background: var(--panel-2); border: 1px solid var(--line); font-weight: 700; padding: 0 15px; }
+    .secondary:hover, .icon-btn:hover { background: #223047; border-color: #41516b; }
+    .header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+    .stat { position: relative; overflow: hidden; background: linear-gradient(145deg, rgba(27,39,59,.96), rgba(18,26,41,.96)); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }
+    .stat::after { content: ""; position: absolute; width: 80px; height: 80px; border-radius: 50%; right: -35px; top: -42px; background: var(--tone); opacity: .14; }
+    .stat span { display: block; color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+    .stat strong { display: block; margin-top: 7px; font-size: 2rem; letter-spacing: -.04em; }
+    .workspace { background: rgba(19,27,43,.92); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); overflow: hidden; }
+    .toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(150px, 210px)); gap: 10px; padding: 16px; border-bottom: 1px solid var(--line); }
+    .control { position: relative; }
+    .control svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 17px; color: var(--muted); pointer-events: none; }
+    input, select, textarea { width: 100%; color: var(--text); background: #0f1725; border: 1px solid var(--line); border-radius: 11px; min-height: 44px; padding: 10px 12px; }
+    .control input { padding-left: 41px; }
+    input::placeholder, textarea::placeholder { color: #6f8099; }
+    select { appearance: none; background-image: linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%); background-position: calc(100% - 18px) 19px,calc(100% - 13px) 19px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 890px; }
+    th { padding: 13px 16px; text-align: left; color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .09em; border-bottom: 1px solid var(--line); }
+    td { padding: 16px; border-bottom: 1px solid rgba(42,56,80,.72); vertical-align: middle; }
+    tbody tr { transition: background .16s; }
+    tbody tr:hover { background: rgba(255,255,255,.018); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .company { font-weight: 800; font-size: 1rem; }
+    .role { color: var(--muted); font-size: .86rem; margin-top: 3px; }
+    .location, .date, .source { color: #c2ccda; font-size: .88rem; }
+    .status { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-size: .8rem; font-weight: 800; padding: 7px 10px; border-radius: 999px; color: var(--status-color); background: color-mix(in srgb, var(--status-color) 13%, transparent); border: 1px solid color-mix(in srgb, var(--status-color) 28%, transparent); }
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .actions { display: flex; gap: 6px; justify-content: flex-end; }
+    .icon-btn { width: 38px; min-height: 38px; display: grid; place-items: center; color: var(--muted); background: transparent; border: 1px solid transparent; }
+    .icon-btn svg { width: 17px; }
+    .icon-btn.delete:hover { color: var(--danger); border-color: rgba(255,122,138,.3); background: rgba(255,122,138,.08); }
+    .empty { text-align: center; padding: 64px 20px 72px; }
+    .empty-icon { width: 64px; height: 64px; border-radius: 20px; margin: 0 auto 18px; display: grid; place-items: center; color: var(--accent); background: rgba(89,217,177,.09); border: 1px solid rgba(89,217,177,.22); }
+    .empty-icon svg { width: 30px; }
+    .empty h2 { margin: 0; font-size: 1.35rem; }
+    .empty p { color: var(--muted); max-width: 430px; margin: 8px auto 20px; line-height: 1.55; }
+    .hidden { display: none !important; }
+    dialog { width: min(720px, calc(100% - 28px)); max-height: calc(100vh - 32px); padding: 0; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 30px 100px rgba(0,0,0,.6); }
+    dialog::backdrop { background: rgba(3,8,14,.78); backdrop-filter: blur(5px); }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 22px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 2; }
+    .dialog-head h2 { margin: 0; font-size: 1.25rem; }
+    form { padding: 22px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field.full { grid-column: 1 / -1; }
+    label { display: block; font-weight: 750; font-size: .86rem; margin-bottom: 7px; }
+    .optional { color: var(--muted); font-weight: 500; }
+    textarea { min-height: 106px; resize: vertical; line-height: 1.5; }
+    .form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+    .danger-btn { color: var(--danger); }
+    .menu { position: relative; }
+    .menu-panel { position: absolute; z-index: 5; right: 0; top: calc(100% + 7px); width: 210px; padding: 7px; background: #172136; border: 1px solid var(--line); border-radius: 13px; box-shadow: var(--shadow); }
+    .menu-panel button { width: 100%; text-align: left; border: 0; color: var(--text); background: transparent; padding: 10px 11px; border-radius: 8px; }
+    .menu-panel button:hover { background: #223047; }
+    .menu-panel .danger-btn:hover { background: rgba(255,122,138,.08); }
+    .toast { position: fixed; left: 50%; bottom: 24px; z-index: 20; transform: translate(-50%, 24px); opacity: 0; pointer-events: none; display: flex; align-items: center; gap: 18px; background: #edf5f2; color: #101a18; padding: 12px 14px 12px 17px; border-radius: 13px; box-shadow: 0 18px 50px rgba(0,0,0,.35); transition: .22s ease; font-weight: 700; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+    .toast button { color: #0b6a51; font-weight: 900; border: 0; background: transparent; }
+    .result-count { padding: 11px 16px; color: var(--muted); font-size: .82rem; border-bottom: 1px solid var(--line); }
+    .cards { display: none; }
+    .card { padding: 17px; border-bottom: 1px solid var(--line); }
+    .card-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 15px; color: var(--muted); font-size: .85rem; }
+    .card-meta strong { display: block; color: #d9e0eb; margin-top: 3px; font-weight: 650; }
+    footer { color: #718097; text-align: center; font-size: .8rem; margin-top: 18px; }
+    @media (max-width: 850px) {
+      header { flex-direction: column; }
+      .header-actions { width: 100%; justify-content: flex-start; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .toolbar .control { grid-column: 1 / -1; }
+      .table-wrap { display: none; }
+      .cards { display: block; }
+    }
+    @media (max-width: 540px) {
+      .shell { padding-top: 20px; }
+      h1 { font-size: 2.35rem; }
+      .header-actions > .primary { flex: 1; }
+      .stats { gap: 8px; }
+      .stat { padding: 14px; }
+      .stat strong { font-size: 1.65rem; }
+      .toolbar { grid-template-columns: 1fr; }
+      .toolbar .control { grid-column: auto; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full, .form-actions { grid-column: auto; }
+      form { padding: 18px; }
+      .card-meta { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">Career dashboard</p>
+        <h1>Job application tracker</h1>
+        <p class="privacy">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <span id="storageStatus">Saved in this browser until you connect a folder.</span>
+        </p>
+      </div>
+      <div class="header-actions">
+        <button class="secondary" id="folderButton" type="button">Choose save folder</button>
+        <div class="menu">
+          <button class="secondary" id="dataMenuButton" type="button" aria-expanded="false">Data &amp; backup</button>
+          <div class="menu-panel hidden" id="dataMenu" role="menu">
+            <button type="button" id="exportJson">Export backup (.json)</button>
+            <button type="button" id="exportCsv">Export spreadsheet (.csv)</button>
+            <button type="button" id="importButton">Import backup</button>
+            <button type="button" id="clearAll" class="danger-btn">Clear all data</button>
+          </div>
+        </div>
+        <button class="primary" id="addButton" type="button">+ Add application</button>
+      </div>
+    </header>
+
+    <section class="stats" aria-label="Application statistics">
+      <article class="stat" style="--tone: var(--blue)"><span>Total applications</span><strong id="totalStat">0</strong></article>
+      <article class="stat" style="--tone: var(--warning)"><span>Active process</span><strong id="activeStat">0</strong></article>
+      <article class="stat" style="--tone: var(--purple)"><span>Interviews</span><strong id="interviewStat">0</strong></article>
+      <article class="stat" style="--tone: var(--accent)"><span>Offers</span><strong id="offerStat">0</strong></article>
+    </section>
+
+    <section class="workspace" aria-label="Applications">
+      <div class="toolbar">
+        <div class="control">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="searchInput" type="search" placeholder="Search company, role, or location" aria-label="Search applications">
+        </div>
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="all">All statuses</option>
+          <option>Interested</option><option>Applied</option><option>Assessment</option><option>Interview</option><option>Offer</option><option>Rejected</option><option>Withdrawn</option>
+        </select>
+        <select id="sortSelect" aria-label="Sort applications">
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="company-asc">Company A–Z</option>
+          <option value="updated-desc">Recently updated</option>
+        </select>
+      </div>
+      <div class="result-count" id="resultCount">0 applications</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Company &amp; role</th><th>Status</th><th>Location</th><th>Date applied</th><th>Source</th><th><span class="hidden">Actions</span></th></tr></thead>
+          <tbody id="applicationRows"></tbody>
+        </table>
+      </div>
+      <div class="cards" id="applicationCards"></div>
+      <div class="empty" id="emptyState">
+        <div class="empty-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"/></svg></div>
+        <h2 id="emptyTitle">Track your first application</h2>
+        <p id="emptyCopy">Add a job, record where you are in the process, and keep every follow-up in one place.</p>
+        <button class="primary" id="emptyAddButton" type="button">Add your first application</button>
+      </div>
+    </section>
+    <footer>Use “Data &amp; backup” regularly to keep a separate copy of your applications.</footer>
+  </main>
+
+  <dialog id="applicationDialog">
+    <div class="dialog-head">
+      <h2 id="dialogTitle">Add application</h2>
+      <button class="icon-btn" id="closeDialog" type="button" aria-label="Close dialog"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <form id="applicationForm">
+      <input type="hidden" id="applicationId">
+      <div class="form-grid">
+        <div class="field"><label for="company">Company</label><input id="company" required maxlength="100" autocomplete="organization"></div>
+        <div class="field"><label for="role">Job title</label><input id="role" required maxlength="120"></div>
+        <div class="field"><label for="status">Status</label><select id="status" required><option>Interested</option><option selected>Applied</option><option>Assessment</option><option>Interview</option><option>Offer</option><option>Rejected</option><option>Withdrawn</option></select></div>
+        <div class="field"><label for="dateApplied">Date applied</label><input id="dateApplied" type="date" required></div>
+        <div class="field"><label for="location">Location <span class="optional">(optional)</span></label><input id="location" maxlength="100" placeholder="Stamford, CT or Remote"></div>
+        <div class="field"><label for="source">Source <span class="optional">(optional)</span></label><input id="source" maxlength="100" placeholder="LinkedIn, Handshake, referral…"></div>
+        <div class="field full"><label for="jobUrl">Job posting link <span class="optional">(optional)</span></label><input id="jobUrl" type="url" maxlength="500" placeholder="https://"></div>
+        <div class="field"><label for="contact">Contact <span class="optional">(optional)</span></label><input id="contact" maxlength="120" placeholder="Recruiter or hiring manager"></div>
+        <div class="field"><label for="deadline">Next follow-up <span class="optional">(optional)</span></label><input id="deadline" type="date"></div>
+        <div class="field"><label for="salary">Salary <span class="optional">(optional)</span></label><input id="salary" maxlength="80" placeholder="$25/hour or $80–90k"></div>
+        <div class="field full"><label for="notes">Notes <span class="optional">(optional)</span></label><textarea id="notes" maxlength="3000" placeholder="Interview details, contacts, next steps…"></textarea></div>
+        <div class="form-actions"><button class="secondary" id="cancelDialog" type="button">Cancel</button><button class="primary" type="submit">Save application</button></div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirmDialog">
+    <div class="dialog-head"><h2 id="confirmTitle">Confirm action</h2></div>
+    <div style="padding:22px"><p id="confirmMessage" style="color:var(--muted);line-height:1.55;margin:0 0 22px"></p><div style="display:flex;justify-content:flex-end;gap:10px"><button class="secondary" id="confirmCancel" type="button">Cancel</button><button class="primary" id="confirmAccept" type="button" style="background:var(--danger);color:#24080c">Delete</button></div></div>
+  </dialog>
+  <input type="file" id="importFile" class="hidden" accept="application/json,.json">
+  <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMessage"></span><button id="toastAction" type="button" class="hidden">Undo</button></div>
+
+  <script>
+    (() => {
+      'use strict';
+      const STORAGE_KEY = 'jobTrackerApplications.v1';
+      const CURRENT_FILE = 'job_applications_current.json';
+      const BACKUP_FILE = 'job_applications_backup.json';
+      const statuses = { Interested:'#7caeff', Applied:'#f2c66d', Assessment:'#e89b72', Interview:'#b49aff', Offer:'#59d9b1', Rejected:'#ff7a8a', Withdrawn:'#9aa9bf' };
+      const $ = id => document.getElementById(id);
+      let applications = loadApplications();
+      let deletedApplication = null;
+      let toastTimer;
+      let confirmAction = null;
+      let directoryHandle = null;
+      let fileSaveQueue = Promise.resolve();
+
+      function loadApplications() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+          return Array.isArray(parsed) ? parsed.filter(isValidApplication) : [];
+        } catch { return []; }
+      }
+
+      function isValidApplication(item) {
+        return item && typeof item === 'object' && typeof item.id === 'string' && typeof item.company === 'string' && typeof item.role === 'string';
+      }
+
+      function saveApplications() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(applications));
+          queueDiskSave();
+          return true;
+        } catch {
+          showToast('Could not save. Export a backup and check browser storage.');
+          return false;
+        }
+      }
+
+      function openHandleDatabase() {
+        return new Promise((resolve,reject) => {
+          const request=indexedDB.open('jobTrackerFileStorage',1);
+          request.onupgradeneeded=()=>request.result.createObjectStore('handles');
+          request.onsuccess=()=>resolve(request.result);
+          request.onerror=()=>reject(request.error);
+        });
+      }
+
+      async function rememberDirectory(handle) {
+        const db=await openHandleDatabase();
+        await new Promise((resolve,reject)=>{const tx=db.transaction('handles','readwrite');tx.objectStore('handles').put(handle,'saveDirectory');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+        db.close();
+      }
+
+      async function recalledDirectory() {
+        const db=await openHandleDatabase();
+        const handle=await new Promise((resolve,reject)=>{const tx=db.transaction('handles','readonly');const request=tx.objectStore('handles').get('saveDirectory');request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>reject(request.error);});
+        db.close(); return handle;
+      }
+
+      async function readFileFromDirectory(name) {
+        const handle=await directoryHandle.getFileHandle(name);
+        const file=await handle.getFile();
+        return file.text();
+      }
+
+      async function writeFileToDirectory(name,content) {
+        const handle=await directoryHandle.getFileHandle(name,{create:true});
+        const writable=await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+      }
+
+      function setStorageConnected(connected,needsPermission=false) {
+        $('storageStatus').textContent=connected ? `Auto-saving current and backup files in “${directoryHandle.name}”.` : (needsPermission ? 'Reconnect your save folder to load the latest file.' : 'Saved in this browser until you connect a folder.');
+        $('folderButton').textContent=connected ? 'Save folder connected' : (needsPermission ? 'Reconnect save folder' : 'Choose save folder');
+      }
+
+      async function loadCurrentFile(showMessage=true) {
+        try {
+          const parsed=JSON.parse(await readFileFromDirectory(CURRENT_FILE));
+          const loaded=Array.isArray(parsed) ? parsed : parsed.applications;
+          if(!Array.isArray(loaded)||!loaded.every(isValidApplication)) throw new Error('Invalid file');
+          applications=loaded;
+          localStorage.setItem(STORAGE_KEY,JSON.stringify(applications));
+          render();
+          if(showMessage) showToast(`Loaded ${applications.length} application${applications.length===1?'':'s'} from your current save.`);
+        } catch(error) {
+          if(error?.name!=='NotFoundError') showToast('The current save file could not be read. Browser data is still available.');
+        }
+      }
+
+      async function saveSnapshotToDisk(snapshot=applications) {
+        if(!directoryHandle) return;
+        const permission=await directoryHandle.queryPermission({mode:'readwrite'});
+        if(permission!=='granted'){setStorageConnected(false,true);return;}
+        let previousCurrent='';
+        try { previousCurrent=await readFileFromDirectory(CURRENT_FILE); } catch(error) { if(error?.name!=='NotFoundError') throw error; }
+        if(previousCurrent) await writeFileToDirectory(BACKUP_FILE,previousCurrent);
+        const payload=JSON.stringify({version:1,savedAt:new Date().toISOString(),applications:snapshot},null,2);
+        await writeFileToDirectory(CURRENT_FILE,payload);
+        setStorageConnected(true);
+      }
+
+      function queueDiskSave() {
+        if(!directoryHandle) return;
+        const snapshot=typeof structuredClone==='function' ? structuredClone(applications) : JSON.parse(JSON.stringify(applications));
+        fileSaveQueue=fileSaveQueue.then(()=>saveSnapshotToDisk(snapshot)).catch(()=>{setStorageConnected(false,true);showToast('The folder save failed. Reconnect the folder and try again.');});
+      }
+
+      async function connectFolder() {
+        if(!window.showDirectoryPicker){showToast('Automatic folder saving needs Chrome or Edge. You can still export backups manually.');return;}
+        try {
+          if(!directoryHandle) directoryHandle=await recalledDirectory();
+          if(!directoryHandle) directoryHandle=await window.showDirectoryPicker({mode:'readwrite',id:'job-tracker-saves'});
+          let permission=await directoryHandle.queryPermission({mode:'readwrite'});
+          if(permission!=='granted') permission=await directoryHandle.requestPermission({mode:'readwrite'});
+          if(permission!=='granted') throw new Error('Permission denied');
+          await rememberDirectory(directoryHandle);
+          setStorageConnected(true);
+          try {
+            await readFileFromDirectory(CURRENT_FILE);
+            await loadCurrentFile();
+          } catch(error) {
+            if(error?.name==='NotFoundError'){await saveSnapshotToDisk();showToast('Save folder connected and current file created.');}
+            else throw error;
+          }
+        } catch(error) { if(error?.name!=='AbortError') showToast('The save folder was not connected.'); }
+      }
+
+      async function initializeFolderStorage() {
+        if(!window.showDirectoryPicker || !window.indexedDB) return;
+        try {
+          directoryHandle=await recalledDirectory();
+          if(!directoryHandle) return;
+          const permission=await directoryHandle.queryPermission({mode:'readwrite'});
+          if(permission==='granted'){setStorageConnected(true);await loadCurrentFile(false);}
+          else setStorageConnected(false,true);
+        } catch { directoryHandle=null; }
+      }
+
+      function escapeCsv(value) { return '"' + String(value ?? '').replaceAll('"','""') + '"'; }
+      function makeId() { return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); }
+      function formatDate(value) {
+        if (!value) return '—';
+        const date = new Date(value + 'T12:00:00');
+        return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+      }
+      function today() { return new Date().toISOString().slice(0,10); }
+
+      function filteredApplications() {
+        const query = $('searchInput').value.trim().toLowerCase();
+        const filter = $('statusFilter').value;
+        const result = applications.filter(app => {
+          const haystack = [app.company,app.role,app.location,app.source,app.contact,app.notes].join(' ').toLowerCase();
+          return (!query || haystack.includes(query)) && (filter === 'all' || app.status === filter);
+        });
+        const sort = $('sortSelect').value;
+        result.sort((a,b) => {
+          if (sort === 'date-asc') return (a.dateApplied || '').localeCompare(b.dateApplied || '');
+          if (sort === 'company-asc') return a.company.localeCompare(b.company,undefined,{sensitivity:'base'});
+          if (sort === 'updated-desc') return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+          return (b.dateApplied || '').localeCompare(a.dateApplied || '');
+        });
+        return result;
+      }
+
+      function render() {
+        const shown = filteredApplications();
+        $('totalStat').textContent = applications.length;
+        $('activeStat').textContent = applications.filter(a => ['Applied','Assessment','Interview'].includes(a.status)).length;
+        $('interviewStat').textContent = applications.filter(a => a.status === 'Interview').length;
+        $('offerStat').textContent = applications.filter(a => a.status === 'Offer').length;
+        $('resultCount').textContent = `${shown.length} ${shown.length === 1 ? 'application' : 'applications'}${shown.length !== applications.length ? ` of ${applications.length}` : ''}`;
+        $('applicationRows').replaceChildren(...shown.map(makeRow));
+        $('applicationCards').replaceChildren(...shown.map(makeCard));
+        const empty = shown.length === 0;
+        $('emptyState').classList.toggle('hidden', !empty);
+        $('resultCount').classList.toggle('hidden', empty && applications.length === 0);
+        document.querySelector('.table-wrap').classList.toggle('hidden', empty);
+        $('applicationCards').classList.toggle('hidden', empty);
+        if (empty) {
+          const filtered = applications.length > 0;
+          $('emptyTitle').textContent = filtered ? 'No applications match' : 'Track your first application';
+          $('emptyCopy').textContent = filtered ? 'Try a different search or status filter.' : 'Add a job, record where you are in the process, and keep every follow-up in one place.';
+          $('emptyAddButton').textContent = filtered ? 'Clear filters' : 'Add your first application';
+        }
+      }
+
+      function statusBadge(app) {
+        const badge = document.createElement('span');
+        badge.className = 'status';
+        badge.style.setProperty('--status-color', statuses[app.status] || statuses.Applied);
+        badge.textContent = app.status || 'Applied';
+        return badge;
+      }
+
+      function makeRow(app) {
+        const tr = document.createElement('tr');
+        const job = document.createElement('td');
+        const company = document.createElement(app.jobUrl ? 'a' : 'div');
+        company.className = 'company'; company.textContent = app.company;
+        if (app.jobUrl) { company.href = app.jobUrl; company.target = '_blank'; company.rel = 'noopener'; company.style.color = 'var(--text)'; }
+        const role = document.createElement('div'); role.className = 'role'; role.textContent = app.role;
+        job.append(company,role);
+        const statusTd = document.createElement('td'); statusTd.append(statusBadge(app));
+        const location = textCell(app.location || '—','location');
+        const date = textCell(formatDate(app.dateApplied),'date');
+        const source = textCell(app.source || '—','source');
+        const actions = document.createElement('td'); actions.append(actionButtons(app));
+        tr.append(job,statusTd,location,date,source,actions);
+        return tr;
+      }
+
+      function textCell(value,className) { const td=document.createElement('td'); td.className=className; td.textContent=value; return td; }
+
+      function actionButtons(app) {
+        const wrap = document.createElement('div'); wrap.className = 'actions';
+        const edit = iconButton('Edit','<path d="M13.5 6.5l4 4M4 20l4.5-1 10-10a2.8 2.8 0 0 0-4-4l-10 10L4 20z"/>');
+        edit.addEventListener('click',() => openForm(app));
+        const del = iconButton('Delete','<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>','delete');
+        del.addEventListener('click',() => requestDelete(app.id));
+        wrap.append(edit,del); return wrap;
+      }
+
+      function iconButton(label,path,extra='') {
+        const btn=document.createElement('button'); btn.type='button'; btn.className=`icon-btn ${extra}`; btn.setAttribute('aria-label',label); btn.title=label;
+        btn.innerHTML=`<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${path}</svg>`; return btn;
+      }
+
+      function makeCard(app) {
+        const card=document.createElement('article'); card.className='card';
+        const top=document.createElement('div'); top.className='card-top';
+        const title=document.createElement('div'); const company=document.createElement('div'); company.className='company'; company.textContent=app.company;
+        const role=document.createElement('div'); role.className='role'; role.textContent=app.role; title.append(company,role); top.append(title,statusBadge(app));
+        const meta=document.createElement('div'); meta.className='card-meta';
+        [['Location',app.location||'—'],['Applied',formatDate(app.dateApplied)],['Source',app.source||'—'],['Follow-up',formatDate(app.deadline)]].forEach(([label,value])=>{ const d=document.createElement('div'); d.textContent=label; const s=document.createElement('strong'); s.textContent=value; d.append(s); meta.append(d); });
+        const actions=actionButtons(app); actions.style.marginTop='15px'; actions.style.justifyContent='flex-start';
+        card.append(top,meta,actions); return card;
+      }
+
+      function openForm(app=null) {
+        $('applicationForm').reset();
+        $('applicationId').value = app?.id || '';
+        $('dialogTitle').textContent = app ? 'Edit application' : 'Add application';
+        $('dateApplied').value = app?.dateApplied || today();
+        $('status').value = app?.status || 'Applied';
+        ['company','role','location','source','jobUrl','contact','deadline','salary','notes'].forEach(key => $(key).value = app?.[key] || '');
+        $('applicationDialog').showModal();
+        setTimeout(()=>$('company').focus(),0);
+      }
+
+      function closeForm() { $('applicationDialog').close(); }
+
+      function formData() {
+        const id=$('applicationId').value;
+        const current=applications.find(a=>a.id===id);
+        return { id:id||makeId(), company:$('company').value.trim(), role:$('role').value.trim(), status:$('status').value, dateApplied:$('dateApplied').value, location:$('location').value.trim(), source:$('source').value.trim(), jobUrl:$('jobUrl').value.trim(), contact:$('contact').value.trim(), deadline:$('deadline').value, salary:$('salary').value.trim(), notes:$('notes').value.trim(), createdAt:current?.createdAt||new Date().toISOString(), updatedAt:new Date().toISOString() };
+      }
+
+      function upsertApplication(app) {
+        const index=applications.findIndex(a=>a.id===app.id);
+        if (index>=0) applications[index]=app; else applications.push(app);
+        if (saveApplications()) { render(); return true; }
+        return false;
+      }
+
+      function requestDelete(id) {
+        const app=applications.find(a=>a.id===id); if (!app) return;
+        showConfirm('Delete application?',`Remove ${app.role} at ${app.company}? You can undo immediately after deleting.`,'Delete',()=>deleteApplication(id));
+      }
+
+      function deleteApplication(id) {
+        const index=applications.findIndex(a=>a.id===id); if(index<0) return;
+        deletedApplication={app:applications[index],index}; applications.splice(index,1); saveApplications(); render();
+        showToast('Application deleted.','Undo',()=>{ applications.splice(deletedApplication.index,0,deletedApplication.app); deletedApplication=null; saveApplications(); render(); showToast('Application restored.'); });
+      }
+
+      function showConfirm(title,message,buttonLabel,action) {
+        $('confirmTitle').textContent=title; $('confirmMessage').textContent=message; $('confirmAccept').textContent=buttonLabel; confirmAction=action; $('confirmDialog').showModal();
+      }
+
+      function showToast(message,actionLabel='',action=null) {
+        clearTimeout(toastTimer); $('toastMessage').textContent=message; const button=$('toastAction');
+        button.classList.toggle('hidden',!action); button.textContent=actionLabel;
+        button.onclick=()=>{ $('toast').classList.remove('show'); if(action) action(); };
+        $('toast').classList.add('show'); toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4500);
+      }
+
+      function download(content,name,type) {
+        const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),500);
+      }
+
+      function registerWebMcp() {
+        const context=document.modelContext; if (!context?.registerTool) return;
+        const schema={type:'object',properties:{company:{type:'string'},role:{type:'string'},status:{type:'string',enum:Object.keys(statuses)},dateApplied:{type:'string'},location:{type:'string'},source:{type:'string'},jobUrl:{type:'string'},contact:{type:'string'},deadline:{type:'string'},salary:{type:'string'},notes:{type:'string'}},required:['company','role','status','dateApplied'],additionalProperties:false};
+        try {
+          context.registerTool({name:'list_job_applications',title:'List job applications',description:'List the job applications currently saved in this tracker.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute:()=>({applications:[...applications],count:applications.length})});
+          context.registerTool({name:'add_job_application',title:'Add job application',description:'Add a job application to the tracker and update the visible list.',inputSchema:schema,annotations:{readOnlyHint:false,untrustedContentHint:true},execute:(input)=>{if(!input||typeof input.company!=='string'||!input.company.trim()||typeof input.role!=='string'||!input.role.trim()) throw new Error('Company and role are required.'); const app={id:makeId(),...input,company:input.company.trim(),role:input.role.trim(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; if(!upsertApplication(app)) throw new Error('The application could not be saved.'); return {id:app.id,status:'saved'};}});
+        } catch { /* Unsupported or duplicate registration should not affect the tracker. */ }
+      }
+
+      $('applicationForm').addEventListener('submit',event=>{ event.preventDefault(); const app=formData(); if(upsertApplication(app)){ closeForm(); showToast($('applicationId').value?'Application updated.':'Application added.'); } });
+      $('addButton').addEventListener('click',()=>openForm());
+      $('folderButton').addEventListener('click',connectFolder);
+      $('emptyAddButton').addEventListener('click',()=>{ if(applications.length){$('searchInput').value='';$('statusFilter').value='all';render();}else openForm(); });
+      $('closeDialog').addEventListener('click',closeForm); $('cancelDialog').addEventListener('click',closeForm);
+      $('applicationDialog').addEventListener('click',e=>{if(e.target===$('applicationDialog'))closeForm();});
+      ['searchInput','statusFilter','sortSelect'].forEach(id=>$(id).addEventListener(id==='searchInput'?'input':'change',render));
+      $('dataMenuButton').addEventListener('click',()=>{const panel=$('dataMenu');const open=panel.classList.toggle('hidden')===false;$('dataMenuButton').setAttribute('aria-expanded',String(open));});
+      document.addEventListener('click',e=>{if(!e.target.closest('.menu')){$('dataMenu').classList.add('hidden');$('dataMenuButton').setAttribute('aria-expanded','false');}});
+      $('exportJson').addEventListener('click',()=>{download(JSON.stringify({version:1,exportedAt:new Date().toISOString(),applications},null,2),`job-applications-backup-${today()}.json`,'application/json');showToast('Backup downloaded.');});
+      $('exportCsv').addEventListener('click',()=>{const keys=['company','role','status','dateApplied','location','source','jobUrl','contact','deadline','salary','notes'];const labels=['Company','Job Title','Status','Date Applied','Location','Source','Job URL','Contact','Next Follow-up','Salary','Notes'];const csv=[labels.map(escapeCsv).join(','),...applications.map(a=>keys.map(k=>escapeCsv(a[k])).join(','))].join('\r\n');download('\uFEFF'+csv,`job-applications-${today()}.csv`,'text/csv;charset=utf-8');showToast('Spreadsheet downloaded.');});
+      $('importButton').addEventListener('click',()=>$('importFile').click());
+      $('importFile').addEventListener('change',async event=>{const file=event.target.files[0];event.target.value='';if(!file)return;try{const parsed=JSON.parse(await file.text());const imported=Array.isArray(parsed)?parsed:parsed.applications;if(!Array.isArray(imported)||!imported.every(isValidApplication))throw new Error();showConfirm('Import backup?',`This will replace the ${applications.length} application${applications.length===1?'':'s'} currently saved with ${imported.length} from the backup.`,'Import',()=>{applications=imported;saveApplications();render();showToast('Backup imported.');});}catch{showToast('That file is not a valid job tracker backup.');}});
+      $('clearAll').addEventListener('click',()=>{if(!applications.length){showToast('There is no data to clear.');return;}showConfirm('Clear all data?',`Permanently delete all ${applications.length} saved applications? Export a backup first if you may need them.`,'Clear all',()=>{applications=[];saveApplications();render();showToast('All application data cleared.');});});
+      $('confirmCancel').addEventListener('click',()=>{$('confirmDialog').close();confirmAction=null;});
+      $('confirmAccept').addEventListener('click',()=>{const action=confirmAction;$('confirmDialog').close();confirmAction=null;if(action)action();});
+      render(); registerWebMcp(); initializeFolderStorage();
+    })();
+  </script>
+</body>
+</html>
